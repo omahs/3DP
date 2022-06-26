@@ -152,15 +152,3 @@ In order to join your Node to the Testnet and get rewarded follow the links down
 
 - [Join as a simple node](https://3dpass.org/testnet.html#how_to_join_as_a_simple_node)
 - [Join as Miner and Validator](https://3dpass.org/testnet.html#how_to_join_as_a_miner)
-
-### Run the local Testnet in Docker
-
-First, install [Docker](https://docs.docker.com/get-docker/) and
-[Docker Compose](https://docs.docker.com/compose/install/).
-
-Then run the following command to start two local nodes and a [miner](https://github.com/3Dpass/miner) in development chain:
-
-```bash
-docker compose up --build
-```
-Learn more about [how does it work](https://3dpass.org/testnet.html).
