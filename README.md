@@ -140,15 +140,18 @@ Run the second Node:
 ```bash
 target/release/poscan-consensus --base-path /tmp/bob --chain local --bob --port 30334 --ws-port 9945 --rpc-port 9934  --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp --validator
 ```
-Run miner:
-you have to install [miner](https://github.com/3Dpass/miner)
-
 For more details, refer to Subsrtate
 [Start a Private Network tutorial](https://docs.substrate.io/tutorials/v3/private-network).
 
-### Join the remote Testnet
-
-In order to join your Node to the Testnet and get rewarded follow the links down below:
+Install miner (You have to install [NodeJS v16](https://nodejs.org/en/) and [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/) before)):
+```bash
+yarn
+```
+Run miner:
+```bash
+yarn miner
+```
+### Join the canary network:
 
 - [Join as a simple node](https://3dpass.org/testnet.html#how_to_join_as_a_simple_node)
 - [Join as Miner and Validator](https://3dpass.org/testnet.html#how_to_join_as_a_miner)
