@@ -11,9 +11,9 @@ Every object, transformed by 3DPass, has its own unique and stable identity call
 
 ## Mining with Docker
 First, install [Docker](https://docs.docker.com/get-docker/) and
-[Docker Compose](https://docs.docker.com/compose/install/).
+[Docker Compose](https://docs.docker.com/compose/install/). Second, [create](https://3dpass.org/testnet.html#account) your mining account and modify `docker-compose.override.yml` as it's shown below. 
 
-Run the following command to run the Node and a [miner](https://github.com/3Dpass/miner):
+Run the following command to start the Node with mining:
 
 ```shell
 cp docker-compose.override.yml.example docker-compose.override.yml
