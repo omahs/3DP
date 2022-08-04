@@ -526,6 +526,7 @@ pub fn new_partial(
 pub fn new_full(
 	mut config: Configuration,
 	author: Option<&str>,
+	threads: usize,
 ) -> Result<TaskManager, ServiceError> {
 	let sc_service::PartialComponents {
 		client,
@@ -624,7 +625,7 @@ pub fn new_full(
 		let can_author_with =
 			sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
 
-		let (_worker, worker_task) = sc_consensus_poscan::start_mining_worker(
+		let (worker, worker_task) = sc_consensus_poscan::start_mining_worker(
 			Box::new(pow_block_import),
 			client.clone(),
 			select_chain,
@@ -645,8 +646,8 @@ pub fn new_full(
 			.spawn_blocking("pow", worker_task);
 
 		// Start Mining
-		let	mut poscan_data: Option<PoscanData> = None;
-		let mut poscan_hash: H256 = H256::random();
+		let poscan_data: Option<PoscanData> = None;
+		let poscan_hash: H256 = H256::random();
 
 		let pre_digest = author.encode();
 		let author = sc_consensus_poscan::app::Public::decode(&mut &pre_digest[..]).map_err(|_| {
@@ -673,56 +674,57 @@ pub fn new_full(
 
 		debug!(target:"poscan", ">>> Spawn mining loop");
 
-		thread::spawn(move || loop {
-			let worker = _worker.clone();
-			let metadata = worker.lock().metadata();
-			if let Some(metadata) = metadata {
+		for i in 0..threads {
+			let worker = worker.clone();
+			let author = author.clone();
+			let mut poscan_data = poscan_data.clone();
+			let mut poscan_hash = poscan_hash.clone();
+			let pair = pair.clone();
 
-				// info!(">>> poscan_hash: compute: {:x?}", &poscan_hash);
-				let compute = Compute {
-					difficulty: metadata.difficulty,
-					pre_hash:  metadata.pre_hash,
-					poscan_hash,
-				};
+			thread::spawn(move || loop {
+				let metadata = worker.lock().metadata();
 
-				let signature = compute.sign(&pair);
-				let seal = compute.seal(signature.clone());
-				if hash_meets_difficulty(&seal.work, seal.difficulty) {
-					let mut worker = worker.lock();
+				if let Some(metadata) = metadata {
+					let compute = Compute {
+						difficulty: metadata.difficulty,
+						pre_hash: metadata.pre_hash,
+						poscan_hash,
+					};
 
-					if let Some(ref psdata) = poscan_data {
-						// let _ = psdata.encode();
-						info!(">>> hash_meets_difficulty: submit it: {}, {}, {}",  &seal.work, &seal.poscan_hash, &seal.difficulty);
-						// TODO: pass signature to submit
-						info!(">>> signature: {:x?}", &signature.to_vec());
-						info!(">>> pre_hsash: {:x?}", compute.pre_hash);
-						info!(">>> check verify: {}", compute.verify(&signature.clone(), &author));
-						worker.submit(seal.encode(), &psdata);
+					let signature = compute.sign(&pair);
+					let seal = compute.seal(signature.clone());
+					if hash_meets_difficulty(&seal.work, seal.difficulty) {
+						let mut worker = worker.lock();
+
+						if let Some(ref psdata) = poscan_data {
+							info!(">>> hash_meets_difficulty: submit it: {}, {}, {}",  &seal.work, &seal.poscan_hash, &seal.difficulty);
+							info!(">>> check verify: {}", compute.verify(&signature.clone(), &author));
+							worker.submit(seal.encode(), &psdata);
+						}
+					} else {
+						let mut lock = DEQUE.lock();
+						let maybe_mining_prop = (*lock).pop_front();
+						if let Some(mp) = maybe_mining_prop {
+							info!(">>> thread: {} proccesing 3d object", i);
+
+							let hashes = get_obj_hashes(&mp.pre_obj);
+							if hashes.len() > 0 {
+								let obj_hash = hashes[0];
+								let dh = DoubleHash { pre_hash: metadata.pre_hash, obj_hash };
+								poscan_hash = dh.calc_hash();
+								poscan_data = Some(PoscanData { hashes, obj: mp.pre_obj });
+							} else {
+								warn!(">>> Empty hash set for obj {}", mp.id);
+							}
+						} else {
+							thread::sleep(Duration::new(1, 0));
+						}
 					}
 				} else {
-					let mut lock = DEQUE.lock();
-					let maybe_mining_prop = (*lock).pop_front();
-					if let Some(mp) = maybe_mining_prop {
-						let hashes = get_obj_hashes(&mp.pre_obj);
-						if hashes.len() > 0 {
-							let obj_hash = hashes[0];
-							let dh = DoubleHash { pre_hash: metadata.pre_hash, obj_hash };
-							poscan_hash = dh.calc_hash();
-							poscan_data = Some(PoscanData { hashes, obj: mp.pre_obj });
-						}
-						else {
-							warn!(">>> Empty hash set for obj {}", mp.id);
-						}
-						// thread::sleep(Duration::new(1, 0));
-					}
-					else {
-						thread::sleep(Duration::new(1, 0));
-					}
+					thread::sleep(Duration::new(1, 0));
 				}
-			} else {
-				thread::sleep(Duration::new(1, 0));
-			}
-		});
+			});
+		}
 	}
 
 	let grandpa_config = sc_finality_grandpa::Config {

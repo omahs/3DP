@@ -11,6 +11,9 @@ pub struct Cli {
 
 	#[structopt(long)]
 	pub author: Option<String>,
+
+	#[structopt(long)]
+	pub threads: Option<usize>,
 }
 
 #[derive(Debug, StructOpt)]
