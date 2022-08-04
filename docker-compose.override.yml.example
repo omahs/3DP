@@ -5,3 +5,4 @@ services:
     environment:
       - MEMO_SEED=[PLACE MEMO SEED HERE]
       - ADDRESS=[PLACE MINER ADDRESS HERE]
+      - THREADS=2

@@ -3,4 +3,5 @@
 ./p3d --unsafe-ws-external --unsafe-rpc-external --rpc-cors=all \
   --chain testnetSpecRaw.json --validator \
   --base-path /var/chain \
+  --threads="$THREADS" \
   --author "$ADDRESS"
