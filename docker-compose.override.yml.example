@@ -1,6 +1,9 @@
 version: "3.9"
 
 services:
+  miner:
+    environment:
+      - INTERVAL=100
   node:
     environment:
       - MEMO_SEED=[PLACE MEMO SEED HERE]

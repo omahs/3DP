@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:18.7
 
 WORKDIR /app
 
@@ -9,4 +9,4 @@ COPY ./miner.js /app/miner.js
 
 RUN yarn install
 
-CMD ["yarn", "miner", "--host", "node"]
+CMD exec yarn miner --host node --interval $INTERVAL
