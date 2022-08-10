@@ -26,7 +26,6 @@ structopt = "0.3.8"
 tokio = "0.1.22"
 trie-root = "0.15.2"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-spin = { version = "0.9.3", default-features = false, features = ["mutex", "spin_mutex"] }
 
 # Substrate packages
 sc-basic-authorship = { version = '0.9', git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }

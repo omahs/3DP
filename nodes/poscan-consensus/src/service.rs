@@ -15,11 +15,10 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::path::PathBuf;
-// use sp_runtime::generic::BlockId;
 use sc_consensus_poscan::PoscanData;
 use log::*;
 use sp_std::collections::vec_deque::VecDeque;
-use spin::Mutex;
+use parking_lot::Mutex;
 use std::str::FromStr;
 use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_core::crypto::{Ss58Codec,UncheckedFrom, Ss58AddressFormat, set_default_ss58_version};
@@ -672,9 +671,9 @@ pub fn new_full(
 		// 	"Unable to mine: key not found in keystore".to_string(),
 		// ))?;
 
-		debug!(target:"poscan", ">>> Spawn mining loop");
+		info!(">>> Spawn {} mining loop(s)", threads);
 
-		for i in 0..threads {
+		for _i in 0..threads {
 			let worker = worker.clone();
 			let author = author.clone();
 			let mut poscan_data = poscan_data.clone();
@@ -682,31 +681,31 @@ pub fn new_full(
 			let pair = pair.clone();
 
 			thread::spawn(move || loop {
-				let metadata = worker.lock().metadata();
+				let lock = worker.lock();
+				let metadata = (*lock).metadata();
+				drop(lock);
 
 				if let Some(metadata) = metadata {
-					let compute = Compute {
-						difficulty: metadata.difficulty,
-						pre_hash: metadata.pre_hash,
-						poscan_hash,
-					};
+					if let Some(ref psdata) = poscan_data {
+						let compute = Compute {
+							difficulty: metadata.difficulty,
+							pre_hash: metadata.pre_hash,
+							poscan_hash,
+						};
 
-					let signature = compute.sign(&pair);
-					let seal = compute.seal(signature.clone());
-					if hash_meets_difficulty(&seal.work, seal.difficulty) {
-						let mut worker = worker.lock();
-
-						if let Some(ref psdata) = poscan_data {
+						let signature = compute.sign(&pair);
+						let seal = compute.seal(signature.clone());
+						if hash_meets_difficulty(&seal.work, seal.difficulty) {
 							info!(">>> hash_meets_difficulty: submit it: {}, {}, {}",  &seal.work, &seal.poscan_hash, &seal.difficulty);
 							info!(">>> check verify: {}", compute.verify(&signature.clone(), &author));
-							worker.submit(seal.encode(), &psdata);
+							worker.lock().submit(seal.encode(), &psdata);
 						}
+						poscan_data = None;
 					} else {
 						let mut lock = DEQUE.lock();
 						let maybe_mining_prop = (*lock).pop_front();
+						drop(lock);
 						if let Some(mp) = maybe_mining_prop {
-							info!(">>> thread: {} proccesing 3d object", i);
-
 							let hashes = get_obj_hashes(&mp.pre_obj);
 							if hashes.len() > 0 {
 								let obj_hash = hashes[0];
