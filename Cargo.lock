@@ -5347,6 +5347,7 @@ dependencies = [
  "derive_more 0.99.11",
  "futures 0.3.13",
  "futures-timer 3.0.2",
+ "lazy_static",
  "log",
  "parity-scale-codec 2.3.1",
  "parking_lot 0.11.1",
@@ -5361,6 +5362,7 @@ dependencies = [
  "sp-core 3.0.0 (git+https://github.com/3Dpass/substrate.git?branch=3dp_v3)",
  "sp-inherents 3.0.0 (git+https://github.com/3Dpass/substrate.git?branch=3dp_v3)",
  "sp-runtime 3.0.0 (git+https://github.com/3Dpass/substrate.git?branch=3dp_v3)",
+ "sp-std 3.0.0 (git+https://github.com/3Dpass/substrate.git?branch=3dp_v3)",
  "sp-timestamp",
  "substrate-prometheus-endpoint",
 ]

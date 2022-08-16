@@ -61,9 +61,20 @@ use sc_client_api;
 use log::*;
 use sp_core::{H256, U256};
 use sp_timestamp::{InherentError as TIError, TimestampInherentData};
+use core::ops::Bound::{Excluded, Included};
+use sp_std::collections::btree_set::BTreeSet;
+use std::convert::TryInto;
+use lazy_static::lazy_static;
 
 use crate::worker::UntilImportedOrTimeout;
 use sp_consensus_poscan::{Difficulty, DifficultyApi, MAX_MINING_OBJ_LEN};
+
+lazy_static! {
+    pub static ref CACHE: Mutex<BTreeSet<u64>> = {
+        let m = BTreeSet::new();
+        Mutex::new(m)
+    };
+}
 
 pub mod app {
 	use sp_application_crypto::{app_crypto, sr25519};
@@ -233,6 +244,7 @@ pub struct PowBlockImport<B: BlockT, I, C, S, Algorithm, CAW> {
 	inherent_data_providers: sp_inherents::InherentDataProviders,
 	check_inherents_after: <<B as BlockT>::Header as HeaderT>::Number,
 	can_author_with: CAW,
+	last_cached: u32,
 }
 
 impl<B: BlockT, I: Clone, C, S: Clone, Algorithm: Clone, CAW: Clone> Clone
@@ -247,6 +259,7 @@ impl<B: BlockT, I: Clone, C, S: Clone, Algorithm: Clone, CAW: Clone> Clone
 			inherent_data_providers: self.inherent_data_providers.clone(),
 			check_inherents_after: self.check_inherents_after.clone(),
 			can_author_with: self.can_author_with.clone(),
+			last_cached: self.last_cached,
 		}
 	}
 }
@@ -278,6 +291,7 @@ impl<B, I, C, S, Algorithm, CAW> PowBlockImport<B, I, C, S, Algorithm, CAW> wher
 			select_chain,
 			inherent_data_providers,
 			can_author_with,
+			last_cached: 0,
 		}
 	}
 
@@ -330,6 +344,87 @@ impl<B, I, C, S, Algorithm, CAW> PowBlockImport<B, I, C, S, Algorithm, CAW> wher
 			Ok(())
 		}
 	}
+
+	fn update_cache(&mut self) {
+		let info = self.client.info();
+		let block_id = BlockId::Hash(info.finalized_hash);
+		let fin_num = self.client.block_number_from_id(&block_id).unwrap().unwrap();
+		let fin_num: u32 = u32::from_le_bytes(fin_num.encode()[0..4].try_into().unwrap());
+
+		for number in (self.last_cached + 1)..=fin_num {
+			let digest = self.client
+				.header(BlockId::Number(number.into()))
+				.and_then(|maybe_header| match maybe_header {
+					Some(header) => Ok(Some(header.digest().clone())),
+					None => Ok(None),
+				});
+
+			if let Ok(None) = digest {
+				continue
+			}
+			let digest = digest.unwrap().unwrap();
+
+			let n = digest.logs().len();
+			if n >= 3 {
+				let di = digest.logs()[2].clone();
+				if let DigestItem::Other(v) = di {
+					let hashes: Vec<H256> = v.chunks(32).map(|h| H256::from_slice(h)).collect();
+					let item = [&number.encode()[..], &hashes[0].encode()[0..4]].concat();
+					let item: u64 = u64::from_le_bytes(item.try_into().unwrap());
+					CACHE.lock().insert(item);
+					self.last_cached = number;
+					debug!(target: "cache", "Update cache: block {}", number);
+				}
+			}
+		}
+	}
+
+	fn check_exists(&self, hash: H256) -> bool {
+		let short_hash = u32::from_le_bytes(hash.encode()[0..4].try_into().unwrap());
+		let from: u64 = (short_hash as u64) << 32;
+		let to: u64 = from + (1u64 << 32);
+
+		for item in CACHE.lock().range((Included(from), Excluded(to))) {
+			debug!(target: "cache", "Lookup in cache: item = {:?}", item.encode());
+			let num = u32::from_le_bytes(item.encode()[0..4].try_into().unwrap());
+			if let Some(block_hash) = self.get_poscan_hash(num) {
+				if block_hash == hash {
+					debug!(target: "cache", "Lookup in cache: found full hash in header");
+					return true;
+				}
+				debug!(target: "cache", "Lookup in cache: found full hash but it differs");
+			}
+		}
+		false
+	}
+
+	fn get_poscan_hash(&self, block_num: u32) -> Option<H256> {
+		let digest = self.client
+			.header(BlockId::Number(block_num.into()))
+			.and_then(|maybe_header| match maybe_header {
+				Some(header) => Ok(Some(header.digest().clone())),
+				None => Ok(None),
+			});
+
+		if let Ok(None) = digest {
+			debug!(target: "cache", "get_poscan_hash: no digest");
+
+			return None
+		}
+		let digest = digest.unwrap().unwrap();
+
+		let n = digest.logs().len();
+		debug!(target: "cache", "digest len=: {}", n);
+
+		if n >= 3 {
+			let di = digest.logs()[2].clone();
+			if let DigestItem::Other(v) = di {
+				let hashes: Vec<H256> = v.chunks(32).map(|h| H256::from_slice(h)).collect();
+				return Some(hashes[0])
+			}
+		}
+		None
+	}
 }
 
 impl<B, I, C, S, Algorithm, CAW> BlockImport<B> for PowBlockImport<B, I, C, S, Algorithm, CAW> where
@@ -366,9 +461,9 @@ impl<B, I, C, S, Algorithm, CAW> BlockImport<B> for PowBlockImport<B, I, C, S, A
 
 		let info = self.client.info();
 		let block_id = BlockId::Hash(info.finalized_hash);
-		let num = self.client.block_number_from_id(&block_id).unwrap().unwrap();
+		let fin_num = self.client.block_number_from_id(&block_id).unwrap().unwrap();
 
-		if num + 3u32.into() < *best_num {
+		if fin_num + 3u32.into() < *best_num {
 			error!(">>> Too far from finalized block");
 			return Err(Error::<B>::CheckFinalized.into())
 		}
@@ -406,9 +501,7 @@ impl<B, I, C, S, Algorithm, CAW> BlockImport<B> for PowBlockImport<B, I, C, S, A
 		}
 		else {
 			pre_digest = find_pre_digest::<B>(&block.header)?.unwrap(); // .as_ref().map(|v| &v[..]);
-
 		}
-
 
 		let inner_seal = fetch_seal::<B>(block.post_digests.get(dpos), block.header.hash())?;
 		let pscan_hashes = fetch_seal::<B>(block.post_digests.get(dpos + 1), block.header.hash())?;
@@ -446,16 +539,28 @@ impl<B, I, C, S, Algorithm, CAW> BlockImport<B> for PowBlockImport<B, I, C, S, A
 			return Err(Error::<B>::InvalidSeal.into())
 		}
 
+		self.update_cache();
 		let mut prev_hash = Some(parent_hash);
 		while prev_hash.is_some() {
-			let num: BlockId<B> = BlockId::hash(prev_hash.unwrap());
-			match self.client.block(&num) {
+			let block_id: BlockId<B> = BlockId::hash(prev_hash.unwrap());
+			let num = self.client.block_number_from_id(&block_id).unwrap().unwrap();
+
+			if num <= fin_num {
+				debug!(target: "cache", "Lookup in cache");
+
+				if self.check_exists(hs[0]) {
+					info!(">>>>>> duplicated hash found in cache");
+					return Err(Error::<B>::InvalidSeal.into());
+				}
+				debug!(target: "cache", "Lookup in cache: not found");
+				break
+			}
+			match self.client.block(&block_id) {
 				Ok(maybe_prev_block) => {
 					match maybe_prev_block {
 						Some(signed_block) => {
 							let h = signed_block.block.header();
 							let n = h.digest().logs().len();
-							// info!(">>> parent hash digest len: {}", n);
 							if n >= 3 {
 								let di = h.digest().logs()[2].clone();
 								if let DigestItem::Other(v) = di {
@@ -463,8 +568,6 @@ impl<B, I, C, S, Algorithm, CAW> BlockImport<B> for PowBlockImport<B, I, C, S, A
 									for hh in hashes[..1].iter() {
 										if hs[..1].contains(hh) {
 											info!(">>>>>> duplicated hash found");
-											info!(">>>>>> {:x?}", hs);
-											info!(">>>>>> {:x?}", hashes);
 											return Err(Error::<B>::InvalidSeal.into());
 										}
 									}

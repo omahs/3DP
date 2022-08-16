@@ -18,6 +18,7 @@ sp-core = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", 
 sp-blockchain = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
 sp-runtime = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
 sp-api = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
+sp-std = { version = '3.0', git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
 sc-client-api = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
 sp-block-builder = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
 sp-inherents = { version = "3.0.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
@@ -33,4 +34,5 @@ futures = { version = "0.3.1", features = ["compat"] }
 futures-timer = "3.0.1"
 parking_lot = "0.11.1"
 derive_more = "0.99.2"
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", version = "0.9.0", git = "https://github.com/3Dpass/substrate.git", branch = "3dp_v3" }
