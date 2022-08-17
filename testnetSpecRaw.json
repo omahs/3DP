@@ -9,7 +9,7 @@
   ],
   "telemetryEndpoints": [
     [
-      "wss://telemetry.polkadot.io/submit",
+      "wss://submit.telemetry.3dpass.org/submit",
       0
     ]
   ],
