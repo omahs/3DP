@@ -3,9 +3,9 @@
   "id": "3dp",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/65.108.130.174/tcp/30333/p2p/12D3KooWQsriyEZfyt9kSaNwm98fTrWoAHzXXPH98BCWdx1E83vj",
     "/ip4/65.108.133.126/tcp/30333/p2p/12D3KooWNZqDh1zXpsZ5smwbvzW3buyeSK3hzjxsw85vgv8Wja1x",
-    "/ip4/206.125.42.245/tcp/30333/p2p/12D3KooWLmBoUnHrKQJCQG6rj2DBdpWhG7DgufyXhQHzvy4RW59K"
+    "/ip4/61.171.67.53/tcp/30333/p2p/12D3KooWM2WPaggusQ1jFZemffMKnehqDhjMqxqimmFwApezZLkX",
+    "/ip4/62.210.106.230/tcp/30330/p2p/12D3KooWPLzAJiwRENgm9EovhViH8MnMhUHcCyxMt3ugma3jxm3r"
   ],
   "telemetryEndpoints": [
     [
