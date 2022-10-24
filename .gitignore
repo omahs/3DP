@@ -15,3 +15,12 @@ runtimes/*/Cargo.lock
 .idea/*
 
 docker-compose.override.yml
+*.sqlite
+
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
