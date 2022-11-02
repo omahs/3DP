@@ -1,5 +1,3 @@
-import { WsProvider } from "@polkadot/api";
-
 export const RPC_TYPES = {
   AccountInfo: "AccountInfoWithTripleRefCount",
   Address: "AccountId",
@@ -25,7 +23,7 @@ export const RPC_TYPES = {
 export const ss58Format = 71;
 
 // target/release/poscan-consensus --base-path ~/3dp-chains/test --chain testnetSpecRaw.json --no-prometheus --no-mdns --rpc-cors all --pruning=archive
-export const provider_test = new WsProvider("ws://127.0.0.1:9944");
+export const provider_test = "ws://127.0.0.1:9944";
 
 // target/release/poscan-consensus --base-path ~/3dp-chains/main --chain mainnetSpecRaw.json --no-prometheus --no-mdns --rpc-cors all --ws-port 9945
-export const provider_main = new WsProvider("ws://127.0.0.1:9945");
+export const provider_main = "ws://127.0.0.1:9945";

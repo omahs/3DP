@@ -1,4 +1,4 @@
-import { ApiPromise } from "@polkadot/api";
+import { ApiPromise, WsProvider } from "@polkadot/api";
 import { encodeAddress } from "@polkadot/util-crypto";
 import cliProgress from "cli-progress";
 import { Account, sequelize } from "./lib/models.js";
@@ -19,7 +19,10 @@ const ignored = [
 ];
 
 async function main() {
-  const api = await ApiPromise.create({ provider: provider_test, types: RPC_TYPES });
+  const api = await ApiPromise.create({
+    provider: new WsProvider(provider_test),
+    types: RPC_TYPES,
+  });
 
   const [chain, syncState, nodeName, nodeVersion] = await Promise.all([
     api.rpc.system.chain(),

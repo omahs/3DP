@@ -2,7 +2,7 @@ import { Account, sequelize } from "./lib/models.js";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import keyring from "@polkadot/ui-keyring";
 import { provider_main, RPC_TYPES, ss58Format } from "./lib/config.js";
-import { ApiPromise } from "@polkadot/api";
+import { ApiPromise, WsProvider } from "@polkadot/api";
 
 const limit = 1;
 const mnemonic = "";
@@ -14,7 +14,10 @@ async function main() {
   const pair = keyring.createFromUri(mnemonic);
   console.log(`🔑 ${pair.address}`);
 
-  const api = await ApiPromise.create({ provider: provider_main, types: RPC_TYPES });
+  const api = await ApiPromise.create({
+    provider: new WsProvider(provider_main),
+    types: RPC_TYPES,
+  });
 
   const balance = await api.query.system.account(pair.address);
   console.log(`💰 ${balance.data.free.toHuman()}`);
