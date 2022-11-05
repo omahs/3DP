@@ -18,57 +18,6 @@ const ignored = [
   "d1FCTjo3HP3rZf9qyqH1nq2qMjzUW7NAdthBNS1Q8WBfMKnKK",
 ];
 
-async function main() {
-  const api = await ApiPromise.create({
-    provider: new WsProvider(provider_test),
-    types: RPC_TYPES,
-  });
-
-  const [chain, syncState, nodeName, nodeVersion] = await Promise.all([
-    api.rpc.system.chain(),
-    api.rpc.system.syncState(),
-    api.rpc.system.name(),
-    api.rpc.system.version(),
-  ]);
-  console.log(`You are connected to chain ${chain} using ${nodeName} v${nodeVersion}`);
-
-  const miningLockedAt = 106390;
-  const minBlock = miningLockedAt + 1;
-  const maxBlock = 144479;
-
-  const balances = await getBalancesAtBlock(api, miningLockedAt);
-
-  const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-  bar.start(maxBlock - minBlock, 0);
-
-  let blockNumber = minBlock;
-  while (blockNumber < maxBlock) {
-    const hash = await api.rpc.chain.getBlockHash(blockNumber++);
-    const blockApi = await api.at(hash);
-
-    try {
-      const events = await blockApi.query.system.events();
-      events.forEach(({ event: { data, method, section } }) => {
-        if (section === "balances" && method === "Transfer") {
-          transferFunds(balances, data);
-        }
-      });
-    } catch (e) {
-      console.log(`Error @ block ${blockNumber} :: ${e}`);
-    }
-    bar.update(blockNumber - minBlock);
-  }
-
-  await sequelize.sync();
-  await Account.bulkCreate(
-    Object.entries(balances).map(([address, amount]) => ({ address, amount })),
-    { updateOnDuplicate: ["amount"] }
-  );
-
-  const totalBalance = Object.values(balances).reduce((acc, cur) => acc + cur, BigInt(0));
-  console.log(`Total balance: ${totalBalance}`);
-}
-
 async function getBalancesAtBlock(api, blockNumber) {
   const balancesAtBlock = {};
   const hash = await api.rpc.chain.getBlockHash(blockNumber);
@@ -118,9 +67,51 @@ function transferFunds(balances, data) {
   balances[toAddress] += transferAmount;
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(-1);
-  });
+const api = await ApiPromise.create({
+  provider: new WsProvider(provider_test),
+  types: RPC_TYPES,
+});
+
+const [chain, syncState, nodeName, nodeVersion] = await Promise.all([
+  api.rpc.system.chain(),
+  api.rpc.system.syncState(),
+  api.rpc.system.name(),
+  api.rpc.system.version(),
+]);
+console.log(`You are connected to chain ${chain} using ${nodeName} v${nodeVersion}`);
+
+const miningLockedAt = 106390;
+const minBlock = miningLockedAt + 1;
+const maxBlock = 144479;
+
+const balances = await getBalancesAtBlock(api, miningLockedAt);
+
+const bar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+bar.start(maxBlock - minBlock, 0);
+
+let blockNumber = minBlock;
+while (blockNumber < maxBlock) {
+  const hash = await api.rpc.chain.getBlockHash(blockNumber++);
+  const blockApi = await api.at(hash);
+
+  try {
+    const events = await blockApi.query.system.events();
+    events.forEach(({ event: { data, method, section } }) => {
+      if (section === "balances" && method === "Transfer") {
+        transferFunds(balances, data);
+      }
+    });
+  } catch (e) {
+    console.log(`Error @ block ${blockNumber} :: ${e}`);
+  }
+  bar.update(blockNumber - minBlock);
+}
+
+await sequelize.sync();
+await Account.bulkCreate(
+  Object.entries(balances).map(([address, amount]) => ({ address, amount })),
+  { updateOnDuplicate: ["amount"] }
+);
+
+const totalBalance = Object.values(balances).reduce((acc, cur) => acc + cur, BigInt(0));
+console.log(`Total balance: ${totalBalance}`);
