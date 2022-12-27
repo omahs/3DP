@@ -1,7 +1,7 @@
 
 [![logo](https://3dpass.org/assets/img/3DPass_on_the_moon.png)](https://3dpass.org)
 
-# 3Dpass Node - mainnet
+# 3Dpass Node - canary network P3Dt (testtnet)
 
 3DPass is an OpenSource decentralized WEB 3.0 P2P Layer 1 blockchain platform for tokenization of real physical and virtual objects and its transformation into digital assets. The main idea of 3DPass is to make it possible for people to use real world objects in digital within smart-contracts and dApps and have full control over its copies (learn more about 3DPass [features](https://3dpass.org/features.html) ). This allows to establish 1:1 corespondence between an object and its asset and define ownership as an additional property of the asset providing zero-knowledge proof. Follow the [White Paper](https://3dpass.org/3DPass_white_paper.pdf) for the details.
 
