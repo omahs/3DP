@@ -14,9 +14,9 @@
   ],
   "protocolId": "3dpass",
   "properties": {
-    "ss58Format": 71,
+    "ss58Format": 72,
     "tokenDecimals": 12,
-    "tokenSymbol": "P3D"
+    "tokenSymbol": "P3Dt"
   },
   "codeSubstitutes": {},
   "genesis": {
