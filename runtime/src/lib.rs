@@ -138,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	//   `spec_version`, and `authoring_version` are the same between Wasm and native.
 	// This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
 	//   the compatible custom types.
-	spec_version: 104,
+	spec_version: 105,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -542,7 +542,7 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(0);
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const ProposalBondMaximum: Balance = 500 * DOLLARS;
-	pub const SpendPeriod: BlockNumber = u32::MAX;
+	pub const SpendPeriod: BlockNumber = 24 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 }
