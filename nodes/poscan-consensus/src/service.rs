@@ -22,7 +22,7 @@ use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
 use sp_runtime::traits::Block as BlockT;
 use sp_core::crypto::{Ss58Codec,UncheckedFrom, Ss58AddressFormat, set_default_ss58_version};
 use sp_core::Pair;
-use sp_consensus_poscan::{POSCAN_COIN_ID, POSCAN_ALGO_GRID2D_V3} ;
+use sp_consensus_poscan::{POSCAN_COIN_ID, POSCAN_ALGO_GRID2D_V2} ;
 use async_trait::async_trait;
 use sc_rpc::SubscriptionTaskExecutor;
 use sc_finality_grandpa::{FinalityProofProvider as GrandpaFinalityProofProvider};
@@ -293,16 +293,11 @@ pub fn new_full(
 		Some(shared_authority_set.clone()),
 	);
 
-	use crate::pool::MiningPool;
-	let mining_pool = Some(Arc::new(Mutex::new(MiningPool::new())));
-
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();
 		let shared_voter_state = shared_voter_state.clone();
 
-		let mining_pool = mining_pool.as_ref().map(|a| a.clone());
-		let backend = backend.clone();
 		Box::new(move |deny_unsafe, subscription_executor: SubscriptionTaskExecutor| {
 			let deps =
 				crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe,
@@ -314,8 +309,6 @@ pub fn new_full(
 						subscription_executor: subscription_executor.clone(),
 						finality_provider: finality_proof_provider.clone(),
 					},
-					mining_pool: mining_pool.clone(),
-					backend: backend.clone(),
 				};
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
@@ -373,29 +366,6 @@ pub fn new_full(
 			.spawn_essential_handle()
 			.spawn_blocking("poscan", None,  worker_task);
 
-
-		// let rpc_extensions_builder = {
-		// 	let client = client.clone();
-		// 	let pool = transaction_pool.clone();
-		// 	let shared_voter_state = shared_voter_state.clone();
-		//
-		// 	Box::new(move |deny_unsafe, subscription_executor: SubscriptionTaskExecutor| {
-		// 		let deps =
-		// 			crate::rpc::FullDeps { client: client.clone(), mining_pool: pool.clone(), deny_unsafe,
-		// 				grandpa:
-		// 				crate::rpc::GrandpaDeps {
-		// 					shared_voter_state: shared_voter_state.clone(),
-		// 					shared_authority_set: shared_authority_set.clone(),
-		// 					justification_stream: justification_stream.clone(),
-		// 					subscription_executor: subscription_executor.clone(),
-		// 					finality_provider: finality_proof_provider.clone(),
-		// 				},
-		// 				mining_pool: pool.clone(),
-		// 			};
-		// 		crate::rpc::create_full(deps).map_err(Into::into)
-		// 	})
-		// };
-
 		let pre_digest = author.encode();
 		let author = sc_consensus_poscan::app::Public::decode(&mut &pre_digest[..]).map_err(|_| {
 			ServiceError::Other(
@@ -424,7 +394,6 @@ pub fn new_full(
 		// Start Mining
 		let poscan_data: Option<PoscanData> = None;
 		let poscan_hash: H256 = H256::random();
-		// let mut curr_metadata = None;
 
 		info!(">>> Spawn mining loop(s)");
 
@@ -433,44 +402,11 @@ pub fn new_full(
 			let author = author.clone();
 			let mut poscan_data = poscan_data.clone();
 			let mut poscan_hash = poscan_hash.clone();
-			let mining_pool = mining_pool.as_ref().map(|a| a.clone());
 			let pair = pair.clone();
 
 			thread::spawn(move || loop {
 				let metadata = worker.metadata();
 				if let Some(metadata) = metadata {
-					let maybe_mining_prop =
-						mining_pool.clone()
-							.map(|mining_pool| {
-								let mut mining_pool = mining_pool.lock();
-								mining_pool.update_metadata(metadata.pre_hash, metadata.best_hash, metadata.difficulty);
-								mining_pool.take()
-									.map(|sp| MiningProposal { id: 0, pre_obj: sp.pre_obj })
-							})
-							.flatten()
-							.or_else(|| {
-								let mut lock = DEQUE.lock();
-								(*lock).pop_front()
-							});
-
-					if let Some(mp) = maybe_mining_prop {
-						let hashes = get_obj_hashes(&POSCAN_ALGO_GRID2D_V3, &mp.pre_obj, &metadata.best_hash);
-						if hashes.len() > 0 {
-							let obj_hash = hashes[0];
-							let dh = DoubleHash { pre_hash: metadata.pre_hash, obj_hash };
-							poscan_hash = dh.calc_hash();
-							poscan_data = Some(PoscanData {
-								alg_id: POSCAN_ALGO_GRID2D_V3,
-								hashes,
-								obj:
-								mp.pre_obj
-							});
-						}
-					}
-					else {
-					  	thread::sleep(Duration::new(1, 0));
-					}
-
 					if let Some(ref psdata) = poscan_data {
 						let compute = Compute {
 							difficulty: metadata.difficulty,
@@ -485,13 +421,29 @@ pub fn new_full(
 							info!(">>> check verify: {}", compute.verify(&signature.clone(), &author));
 							let _ = futures::executor::block_on(worker.submit(seal.encode(), &psdata));
 						}
-						else {
-							info!(">>> does not meet difficulty");
-						}
 						poscan_data = None;
+					} else {
+						let mut lock = DEQUE.lock();
+						let maybe_mining_prop = (*lock).pop_front();
+						drop(lock);
+						if let Some(mp) = maybe_mining_prop {
+							let hashes = get_obj_hashes(&POSCAN_ALGO_GRID2D_V2, &mp.pre_obj, &metadata.best_hash);
+							if hashes.len() > 0 {
+								let obj_hash = hashes[0];
+								let dh = DoubleHash { pre_hash: metadata.pre_hash, obj_hash };
+								poscan_hash = dh.calc_hash();
+								poscan_data = Some(PoscanData {
+									alg_id: POSCAN_ALGO_GRID2D_V2,
+									hashes, obj:
+									mp.pre_obj
+								});
+							}
+						} else {
+							thread::sleep(Duration::new(1, 0));
+						}
 					}
 				} else {
-					thread::sleep(Duration::from_millis(10));
+					thread::sleep(Duration::new(1, 0));
 				}
 			});
 		}

@@ -45,7 +45,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/3Dpass/3DP/issues".into()
+		"https://github.com/substrate-developer-hub/recipes/issues".into()
 	}
 
 	fn copyright_start_year() -> i32 {

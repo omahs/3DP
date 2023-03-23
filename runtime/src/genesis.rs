@@ -1,16 +1,20 @@
 //! Helper module to build a genesis configuration for the weight-fee-runtime
 
 use super::{
-	opaque::SessionKeys, AccountId, BalancesConfig, CouncilConfig, DifficultyConfig, GenesisConfig,
-	IndicesConfig, RewardsConfig, SessionConfig, Signature, SudoConfig, SystemConfig,
+	AccountId, Signature, GenesisConfig,
+	BalancesConfig, SudoConfig, SystemConfig, IndicesConfig,
+	DifficultyConfig,
+	RewardsConfig,
+	CouncilConfig,
+	SessionConfig,
 	ValidatorSetConfig,
+	opaque::SessionKeys,
 };
-use sp_consensus_poscan::DOLLARS;
 use sp_core::{sr25519, Pair, Public, U256};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_consensus_poscan::DOLLARS;
 
 /// Helper function to generate a crypto pair from seed
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -35,7 +39,6 @@ pub fn authority_keys_from_seed(seed: &str) -> (AccountId, GrandpaId, ImOnlineId
 		account_id_from_seed::<sr25519::Public>(seed),
 		get_from_seed::<GrandpaId>(seed),
 		get_from_seed::<ImOnlineId>(seed),
-		// get_from_seed::<PoolAuthorityId>(seed),
 	)
 }
 
@@ -81,26 +84,22 @@ pub fn testnet_genesis(
 				.map(|k| (k, 1 << 60))
 				.collect(),
 		},
-		indices: IndicesConfig { indices: vec![] },
-		sudo: SudoConfig {
-			key: Some(root_key),
+		indices: IndicesConfig {
+			indices: vec![],
 		},
+		sudo: SudoConfig { key: Some(root_key) },
 		grandpa: Default::default(),
 		im_online: Default::default(),
-		mining_pool: Default::default(),
-		difficulty: DifficultyConfig { initial_difficulty },
+		difficulty: DifficultyConfig {
+			initial_difficulty,
+		},
 		rewards: RewardsConfig {
 			reward: 500 * DOLLARS,
 			mints: Default::default(),
 		},
 		democracy: Default::default(),
-		membership: Default::default(),
-		phragmen_election: Default::default(),
 		council: CouncilConfig {
-			members: initial_authorities
-				.iter()
-				.map(|x| x.0.clone())
-				.collect::<Vec<_>>(),
+			members: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			phantom: Default::default(),
 		},
 		technical_committee: Default::default(),
@@ -111,22 +110,12 @@ pub fn testnet_genesis(
 		assets: Default::default(),
 		scored_pool: Default::default(),
 		validator_set: ValidatorSetConfig {
-			initial_validators: initial_authorities
-				.iter()
-				.map(|x| x.0.clone())
-				.collect::<Vec<_>>(),
+			initial_validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		},
 		session: SessionConfig {
-			keys: initial_authorities
-				.iter()
-				.map(|x| {
-					(
-						x.0.clone(),
-						x.0.clone(),
-						session_keys(x.1.clone(), x.2.clone()),
-					)
-				})
-				.collect::<Vec<_>>(),
+			keys: initial_authorities.iter().map(|x| {
+				(x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
+			}).collect::<Vec<_>>(),
 		},
 	}
 }

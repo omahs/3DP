@@ -23,7 +23,7 @@
 
 
 use sp_std::vec::Vec;
-use sp_runtime::{ConsensusEngineId, Percent};
+use sp_runtime::ConsensusEngineId;
 use codec::Decode;
 use lzss::{Lzss, SliceReader, VecWriter};
 
@@ -33,7 +33,6 @@ pub const POSCAN_COIN_ID: u8 = 72;
 
 pub const POSCAN_ALGO_GRID2D: [u8; 16] = *b"grid2d-1.1      ";
 pub const POSCAN_ALGO_GRID2D_V2: [u8; 16] = *b"grid2d-1.2      ";
-pub const POSCAN_ALGO_GRID2D_V3: [u8; 16] = *b"grid2d-1.3      ";
 pub const MAX_MINING_OBJ_LEN: usize = 100 * 1024;
 
 /// Type of seal.
@@ -120,14 +119,6 @@ sp_api::decl_runtime_apis! {
 	pub trait DifficultyApi<Difficulty: Decode> {
 		/// Return the target difficulty of the next block.
 		fn difficulty() -> Difficulty;
-	}
-
-	pub trait MiningPoolApi<AccountId>
-	where
-		AccountId: codec::Decode + codec::Encode,
-	{
-		fn difficulty(pool_id: &AccountId) -> Difficulty;
-		fn get_stat(pool_id: &AccountId) -> Option<(Percent, Vec<(AccountId, u32)>)>;
 	}
 
 	pub trait AlgorithmApi {

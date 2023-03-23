@@ -12,8 +12,6 @@ mod cli;
 mod command;
 mod rpc;
 mod mining_rpc;
-mod pool_rpc;
-mod pool;
 
 fn main() -> sc_cli::Result<()> {
 	command::run()
