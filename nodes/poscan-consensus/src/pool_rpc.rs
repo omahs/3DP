@@ -118,13 +118,13 @@ where
 		obj: Vec<u8>,
 	) -> RpcResult<u64> {
 
-		if algo_type != "Grid2dV3" {
-			return Err(JsonRpseeError::Custom("Accept Grid2dV3 algorithm only".to_string()))
+		if algo_type != "Grid2dV2" {
+			return Err(JsonRpseeError::Custom("Accept Grid2dV2 algorithm only".to_string()))
 		}
 
 		let shp = ShareProposal {
 			member_id: member_id.clone(),
-			algo_type: POSCAN_ALGO_GRID2D_V3,
+			algo_type: POSCAN_ALGO_GRID2D_V2,
 			hash,
 			pre_hash,
 			parent_hash,
