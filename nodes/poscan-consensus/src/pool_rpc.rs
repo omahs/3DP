@@ -23,7 +23,7 @@ use sp_core::offchain::OffchainStorage;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sc_client_api::backend::Backend;
-use sp_consensus_poscan::{MiningPoolApi, CheckMemberError, POSCAN_ALGO_GRID2D_V3};
+use sp_consensus_poscan::{MiningPoolApi, CheckMemberError, POSCAN_ALGO_GRID2D_V2};
 
 use alloc::string::String;
 use crate::pool::{MiningPool, ShareProposal, LOG_TARGET};
